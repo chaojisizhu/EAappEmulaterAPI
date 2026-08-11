@@ -23,6 +23,12 @@ public static class Ready
         LoggerHelper.Info(I18nHelper.I18n._("Core.Ready.StartBattlelogListen"));
         BattlelogHttpServer.Run();
 
+        // 启动远程 API 服务
+        if (Globals.ApiEnabled)
+            GameApiServer.Run(Globals.ApiPort);
+        else
+            LoggerHelper.Warn("远程 API 服务未启用（Globals.ApiEnabled = false）");
+
         // 加载玩家头像
         await LoadAvatar();
 
@@ -48,6 +54,9 @@ public static class Ready
 
         LoggerHelper.Info(I18nHelper.I18n._("Core.Ready.StopBattlelogListen"));
         BattlelogHttpServer.Stop();
+
+        // 停止远程 API 服务
+        GameApiServer.Stop();
 
         LoggerHelper.Info(I18nHelper.I18n._("Core.Ready.StopUpdateToken"));
         _autoUpdateTimer?.Dispose();

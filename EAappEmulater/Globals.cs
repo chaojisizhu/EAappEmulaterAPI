@@ -33,6 +33,21 @@ public static class Globals
     /// </summary>
     public static bool AutoLoginEnabled { get; set; } = false;
 
+    /// <summary>
+    /// 远程 API 服务端口（仅监听本机回环）
+    /// </summary>
+    public static int ApiPort { get; set; } = 10090;
+
+    /// <summary>
+    /// 是否启用远程 API 服务
+    /// </summary>
+    public static bool ApiEnabled { get; set; } = true;
+
+    /// <summary>
+    /// BF1ClientAPI 服务端口（BF1 详细状态读取，默认 GHS 版 10087）
+    /// </summary>
+    public static int Bf1ClientApiPort { get; set; } = 10087;
+
     static Globals()
     {
         _configPath = Path.Combine(CoreUtil.Dir_Config, "Config.ini");
@@ -102,6 +117,34 @@ public static class Globals
             LoggerHelper.Info(I18nHelper.I18n._("Globals.AutoLoginNotConfigured"));
         }
 
+        // 读取远程 API 配置
+        var apiPort = IniHelper.ReadString("Api", "Port", _configPath);
+        var apiEnabled = IniHelper.ReadString("Api", "Enabled", _configPath);
+
+        if (int.TryParse(apiPort, out int port) && port is > 0 and < 65536)
+        {
+            ApiPort = port;
+            LoggerHelper.Info($"API 配置读取成功: 端口 {ApiPort}");
+        }
+        else
+        {
+            LoggerHelper.Info($"API 配置未设置或无效，使用默认端口 {ApiPort}");
+        }
+
+        if (bool.TryParse(apiEnabled, out bool enabled))
+        {
+            ApiEnabled = enabled;
+            LoggerHelper.Info($"API 启用状态: {ApiEnabled}");
+        }
+
+        // 读取 BF1ClientAPI 端口
+        var bf1ClientPort = IniHelper.ReadString("Api", "Bf1ClientApiPort", _configPath);
+        if (int.TryParse(bf1ClientPort, out int bf1Port) && bf1Port is > 0 and < 65536)
+        {
+            Bf1ClientApiPort = bf1Port;
+            LoggerHelper.Info($"BF1ClientAPI 端口: {Bf1ClientApiPort}");
+        }
+
         LoggerHelper.Info(I18nHelper.I18n._("Globals.ReadGlobalConfigSuccess"));
     }
 
@@ -121,6 +164,10 @@ public static class Globals
             IniHelper.WriteString("Globals", "AccountSlot", $"{AccountSlot}", _configPath);
             IniHelper.WriteString("Globals", "lang", DefaultLanguage ?? string.Empty, _configPath);
             IniHelper.WriteString("Globals", "AutoLoginEnabled", $"{AutoLoginEnabled}", _configPath);
+
+            IniHelper.WriteString("Api", "Port", $"{ApiPort}", _configPath);
+            IniHelper.WriteString("Api", "Enabled", $"{ApiEnabled}", _configPath);
+            IniHelper.WriteString("Api", "Bf1ClientApiPort", $"{Bf1ClientApiPort}", _configPath);
 
             LoggerHelper.Info(I18nHelper.I18n._("Globals.SaveGlobalConfigPath", _configPath));
             LoggerHelper.Info(I18nHelper.I18n._("Globals.SaveGlobalConfigSuccess"));

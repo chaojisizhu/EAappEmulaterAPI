@@ -26,6 +26,9 @@ public partial class App : Application
         // Load global config first so we know if user specified a language
         Globals.Read();
 
+        // 解析远程 API 启动参数（--api-port / --api-disable）
+        ParseApiArgs(e.Args);
+
         // Determine language to set following rules:
         // - If Config (Globals.DefaultLanguage) has a supported language -> use it
         // - If Config has but not supported -> use system default (if supported) else zh-CN
@@ -156,6 +159,46 @@ using (Process currentProcess = Process.GetCurrentProcess())
         CheckAutoLogin();
 
         base.OnStartup(e);
+    }
+
+    /// <summary>
+    /// 解析远程 API 启动参数
+    /// --api-port &lt;port&gt;  覆盖 API 监听端口
+    /// --api-disable         禁用 API 服务
+    /// </summary>
+    private void ParseApiArgs(string[] args)
+    {
+        if (args is null || args.Length == 0)
+            return;
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            var arg = args[i];
+
+            if (string.Equals(arg, "--api-port", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[i + 1], out int port) && port is > 0 and < 65536)
+                {
+                    Globals.ApiPort = port;
+                    LoggerHelper.Info($"启动参数指定 API 端口: {port}");
+                    i++;
+                }
+            }
+            else if (string.Equals(arg, "--api-disable", StringComparison.OrdinalIgnoreCase))
+            {
+                Globals.ApiEnabled = false;
+                LoggerHelper.Info("启动参数禁用 API 服务");
+            }
+            else if (string.Equals(arg, "--bf1-client-port", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                if (int.TryParse(args[i + 1], out int bf1Port) && bf1Port is > 0 and < 65536)
+                {
+                    Globals.Bf1ClientApiPort = bf1Port;
+                    LoggerHelper.Info($"启动参数指定 BF1ClientAPI 端口: {bf1Port}");
+                    i++;
+                }
+            }
+        }
     }
 
     /// <summary>

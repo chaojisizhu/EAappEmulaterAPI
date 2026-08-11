@@ -116,17 +116,8 @@ public static class Game
 
             ////////////////////////////////////////////////////////
 
-            // 处理旧的 LSX
-            if (gameInfo.IsOldLSX)
-                BattlelogHttpServer.BattlelogType = BattlelogType.BFH;
-            else
-                BattlelogHttpServer.BattlelogType = gameType switch
-                {
-                    GameType.BF3 => BattlelogType.BF3,
-                    GameType.BF4 => BattlelogType.BF4,
-                    GameType.BFH => BattlelogType.BFH,
-                    _ => BattlelogType.None,
-                };
+            // 处理旧的 LSX，设置 Battlelog 监听类型
+            SetBattlelogType(gameInfo);
 
             LoggerHelper.Info(I18nHelper.I18n._("Core.Game.StartGameProcess", gameInfo.Name));
             if (isNotice)
@@ -192,17 +183,8 @@ public static class Game
                 // 启动参数
                 startInfo.Arguments = string.Concat(webArgs, " ", gameInfo.Args).Trim();
             }
-            string serializedData = $"{startInfo.FileName};{startInfo.WorkingDirectory};{startInfo.Arguments};{Account.OriginPCToken};{Account.PlayerName};{EaCrypto.GetRTPHandshakeCode()};{gameInfo.ContentId};{RegistryHelper.GetLocaleByContentId(gameInfo.ContentId)}";
-
-            // 启动程序
-            using (var pipeClient = new NamedPipeClientStream(".", "RunGame_OriginDebug", PipeDirection.Out))
-            {
-                pipeClient.Connect();
-                using (var writer = new StreamWriter(pipeClient))
-                {
-                    writer.WriteLine(serializedData);
-                }
-            }
+            // 通过 OriginDebug 服务进程启动游戏
+            SendToOriginDebug(startInfo.FileName, startInfo.WorkingDirectory, startInfo.Arguments, gameInfo.ContentId, RegistryHelper.GetLocaleByContentId(gameInfo.ContentId));
 
             LoggerHelper.Info(I18nHelper.I18n._("Core.Game.StartGameSuccess", gameInfo.Name));
             if (isNotice)
@@ -214,5 +196,104 @@ public static class Game
             if (isNotice)
                 NotifierHelper.Error(I18nHelper.I18n._("Core.Game.StartGameErrorNotice", gameType));
         }
+    }
+
+    /// <summary>
+    /// 通过显式 exe 路径启动游戏（供 API 远程调用）
+    /// 支持自定义 exe 路径/工作目录/完整启动参数/语言
+    /// </summary>
+    public static void RunGameWithExePath(GameType gameType, string exePath, string workingDirectory, string arguments, string contentId = "", string locale = "", bool isNotice = true)
+    {
+        try
+        {
+            if (!Base.GameInfoDb.ContainsKey(gameType))
+            {
+                LoggerHelper.Warn(I18nHelper.I18n._("Core.Game.StartGameErrorDir", gameType, ""));
+                return;
+            }
+
+            var gameInfo = Base.GameInfoDb[gameType];
+
+            // 校验 exe 路径
+            if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+            {
+                LoggerHelper.Warn(I18nHelper.I18n._("Core.Game.StartGameErrorExe", gameType, exePath));
+                if (isNotice)
+                    NotifierHelper.Warning(I18nHelper.I18n._("Core.Game.StartGameErrorExe", gameType, ""));
+
+                return;
+            }
+
+            // 校验登录 Token
+            if (string.IsNullOrWhiteSpace(Account.OriginPCToken))
+            {
+                LoggerHelper.Warn(I18nHelper.I18n._("Core.Game.StartGameErrorToken", gameType));
+                if (isNotice)
+                    NotifierHelper.Warning(I18nHelper.I18n._("Core.Game.StartGameErrorToken", gameType));
+
+                return;
+            }
+
+            // 缺省参数回填
+            if (string.IsNullOrWhiteSpace(contentId))
+                contentId = gameInfo.ContentId;
+
+            if (string.IsNullOrWhiteSpace(workingDirectory))
+                workingDirectory = Path.GetDirectoryName(exePath);
+
+            // 设置 Battlelog 类型
+            SetBattlelogType(gameInfo);
+
+            LoggerHelper.Info(I18nHelper.I18n._("Core.Game.StartGameProcess", gameInfo.Name));
+            if (isNotice)
+                NotifierHelper.Notice(I18nHelper.I18n._("Core.Game.StartGameProcess", gameInfo.Name));
+
+            SendToOriginDebug(exePath, workingDirectory, arguments, contentId, locale);
+
+            LoggerHelper.Info(I18nHelper.I18n._("Core.Game.StartGameSuccess", gameInfo.Name));
+            if (isNotice)
+                NotifierHelper.Success(I18nHelper.I18n._("Core.Game.StartGameSuccess", gameInfo.Name));
+        }
+        catch (Exception ex)
+        {
+            LoggerHelper.Error(I18nHelper.I18n._("Core.Game.StartGameError", gameType, ex));
+            if (isNotice)
+                NotifierHelper.Error(I18nHelper.I18n._("Core.Game.StartGameErrorNotice", gameType));
+        }
+    }
+
+    /// <summary>
+    /// 设置 Battlelog 监听类型
+    /// </summary>
+    private static void SetBattlelogType(GameInfo gameInfo)
+    {
+        // 处理旧的 LSX
+        if (gameInfo.IsOldLSX)
+            BattlelogHttpServer.BattlelogType = BattlelogType.BFH;
+        else
+            BattlelogHttpServer.BattlelogType = gameInfo.GameType switch
+            {
+                GameType.BF3 => BattlelogType.BF3,
+                GameType.BF4 => BattlelogType.BF4,
+                GameType.BFH => BattlelogType.BFH,
+                _ => BattlelogType.None,
+            };
+    }
+
+    /// <summary>
+    /// 通过命名管道发送启动数据给 OriginDebug 服务进程
+    /// </summary>
+    private static void SendToOriginDebug(string exePath, string workingDir, string arguments, string contentId, string locale)
+    {
+        if (string.IsNullOrWhiteSpace(locale))
+            locale = RegistryHelper.GetLocaleByContentId(contentId);
+
+        var serializedData = $"{exePath};{workingDir};{arguments};{Account.OriginPCToken};{Account.PlayerName};{EaCrypto.GetRTPHandshakeCode()};{contentId};{locale}";
+
+        // 启动程序
+        using var pipeClient = new NamedPipeClientStream(".", "RunGame_OriginDebug", PipeDirection.Out);
+        pipeClient.Connect();
+        using var writer = new StreamWriter(pipeClient);
+        writer.WriteLine(serializedData);
     }
 }

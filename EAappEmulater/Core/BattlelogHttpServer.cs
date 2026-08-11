@@ -11,6 +11,20 @@ public static class BattlelogHttpServer
 
     public static BattlelogType BattlelogType { get; set; }
 
+    /// <summary>
+    /// 获取指定 Battlelog 类型的 Pipe 管道游戏状态（供 API 状态查询）
+    /// </summary>
+    public static string GetPipeServerGameState(BattlelogType type)
+    {
+        return type switch
+        {
+            BattlelogType.BF3 => _bf3PipeServer?.GameState,
+            BattlelogType.BF4 => _bf4PipeServer?.GameState,
+            BattlelogType.BFH => _bfHPipeServer?.GameState,
+            _ => null,
+        };
+    }
+
     private static PipeServer _bf3PipeServer = null;
     private static PipeServer _bf4PipeServer = null;
     private static PipeServer _bfHPipeServer = null;
