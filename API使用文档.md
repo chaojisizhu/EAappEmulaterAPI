@@ -2,7 +2,7 @@
 
 本 API 为 EAappEmulater（EA app 模拟器）内置的本机 REST 服务，用于**远程启动游戏、查询游戏详细状态、关闭游戏**。外部程序（自动化脚本、串流工具、自写前端、游戏农场等）可通过 HTTP 调用，复用主程序已登录的 EA 账号 Token 和完整的 OriginDebug / LSX / Battlelog 模拟链路，**免 EA App / Origin 客户端启动本地已安装的 EA 游戏**。
 
-- **监听地址**：`http://127.0.0.1:10090`（仅本机回环，默认端口可配置）
+- **监听地址**：`http://127.0.0.1:12000`（仅本机回环，默认端口可配置）
 - **数据格式**：JSON（UTF-8）
 - **依赖**：无需额外安装；主程序运行即自动启动本服务
 - **前置条件**：主程序已登录 EA 账号（`launch` 需要 Token，未登录返回 409）
@@ -36,7 +36,7 @@
 
 ```ini
 [Api]
-Port=10090            ; API 监听端口（仅本机回环）
+Port=12000            ; API 监听端口（仅本机回环）
 Enabled=True          ; 是否启用 API 服务
 Bf1ClientApiPort=10087 ; BF1ClientAPI 服务端口（BF1 详细状态读取）
 ```
@@ -77,7 +77,7 @@ Bf1ClientApiPort=10087 ; BF1ClientAPI 服务端口（BF1 详细状态读取）
 
 **请求**：
 ```bash
-curl http://127.0.0.1:10090/api/health
+curl http://127.0.0.1:12000/api/health
 ```
 
 **响应 200**：
@@ -85,7 +85,7 @@ curl http://127.0.0.1:10090/api/health
 {
   "status": "ok",
   "version": "1.9.1.3",
-  "port": 10090,
+  "port": 12000,
   "service": "EAappEmulater Remote API"
 }
 ```
@@ -98,7 +98,7 @@ curl http://127.0.0.1:10090/api/health
 
 **请求**：
 ```bash
-curl http://127.0.0.1:10090/api/games
+curl http://127.0.0.1:12000/api/games
 ```
 
 **响应 200**（数组，共 36 款游戏）：
@@ -182,8 +182,8 @@ curl http://127.0.0.1:10090/api/games
 
 **带 gameType 查询**：
 ```bash
-curl "http://127.0.0.1:10090/api/game/status?gameType=BF1"
-curl "http://127.0.0.1:10090/api/game/status?gameType=BF1&processName=EAAntiCheat.GameServiceLauncher.exe"
+curl "http://127.0.0.1:12000/api/game/status?gameType=BF1"
+curl "http://127.0.0.1:12000/api/game/status?gameType=BF1&processName=EAAntiCheat.GameServiceLauncher.exe"
 ```
 
 **响应 200**（BF1 示例，含详细状态）：
@@ -227,7 +227,7 @@ curl "http://127.0.0.1:10090/api/game/status?gameType=BF1&processName=EAAntiChea
 
 **不带参数查询**（返回全部有启动记录的游戏状态数组）：
 ```bash
-curl http://127.0.0.1:10090/api/game/status
+curl http://127.0.0.1:12000/api/game/status
 ```
 ```json
 [ { "GameType": "BF1", "IsRunning": true, ... }, ... ]
@@ -273,7 +273,7 @@ curl http://127.0.0.1:10090/api/game/status
 
 **请求**：
 ```bash
-curl "http://127.0.0.1:10090/api/games/args?gameType=BF1"
+curl "http://127.0.0.1:12000/api/games/args?gameType=BF1"
 ```
 
 **响应 200**：
@@ -422,26 +422,26 @@ POST /api/game/launch
 
 ```bash
 # 健康检查
-curl http://127.0.0.1:10090/api/health
+curl http://127.0.0.1:12000/api/health
 
 # 游戏列表
-curl http://127.0.0.1:10090/api/games
+curl http://127.0.0.1:12000/api/games
 
 # 启动 BF4（默认路径/参数）
-curl -X POST http://127.0.0.1:10090/api/game/launch \
+curl -X POST http://127.0.0.1:12000/api/game/launch \
   -H "Content-Type: application/json" \
   -d '{"gameType":"BF4"}'
 
 # 启动 BF1 直连服务器（模板模式，替换 gameId）
-curl -X POST http://127.0.0.1:10090/api/game/launch \
+curl -X POST http://127.0.0.1:12000/api/game/launch \
   -H "Content-Type: application/json" \
   -d '{"gameType":"BF1","exePath":"D:\\DepotDownloader-windows-x64\\depots\\1238841\\17371042\\EAAntiCheat.GameServiceLauncher.exe","processName":"EAAntiCheat.GameServiceLauncher.exe,bf1_x64","argsSource":"template","templateVars":{"gameId":"9340024730318"}}'
 
 # 查询 BF1 详细状态
-curl "http://127.0.0.1:10090/api/game/status?gameType=BF1"
+curl "http://127.0.0.1:12000/api/game/status?gameType=BF1"
 
 # 关闭 BF1
-curl -X POST http://127.0.0.1:10090/api/game/kill \
+curl -X POST http://127.0.0.1:12000/api/game/kill \
   -H "Content-Type: application/json" \
   -d '{"gameType":"BF1"}'
 ```
@@ -451,7 +451,7 @@ curl -X POST http://127.0.0.1:10090/api/game/kill \
 ```python
 import json, urllib.request
 
-BASE = "http://127.0.0.1:10090"
+BASE = "http://127.0.0.1:12000"
 
 def api(method, path, body=None):
     data = json.dumps(body).encode() if body is not None else None
@@ -488,7 +488,7 @@ for _ in range(30):
 ## 常见问题
 
 **Q: 访问不了 API？**
-检查主程序是否运行、端口是否被占用（`netstat -ano | findstr 10090`）、Config.ini 的 `Enabled` 是否为 True。
+检查主程序是否运行、端口是否被占用（`netstat -ano | findstr 12000`）、Config.ini 的 `Enabled` 是否为 True。
 
 **Q: launch 返回 409？**
 EA 账号未登录。先在主程序界面登录，或确认当前账号槽有有效 Cookie/Token。

@@ -15,7 +15,7 @@ namespace EAappEmulater.Core;
 public static class GameApiServer
 {
     private static HttpListener _httpListener = null;
-    private static int _port = 10090;
+    private static int _port = 12000;
 
     /// <summary>
     /// 最近启动记录（供状态查询和关闭接口使用）

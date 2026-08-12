@@ -36,7 +36,7 @@ public static class Globals
     /// <summary>
     /// 远程 API 服务端口（仅监听本机回环）
     /// </summary>
-    public static int ApiPort { get; set; } = 10090;
+    public static int ApiPort { get; set; } = 12000;
 
     /// <summary>
     /// 是否启用远程 API 服务
